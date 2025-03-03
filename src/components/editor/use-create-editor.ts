@@ -165,11 +165,13 @@ export const editorComponents = {
 
 export const useCreateEditor = (
   {
+    docId,
     components,
     override,
     readOnly,
     ...options
   }: {
+    docId?: string | string[];
     components?: Record<string, any>;
     plugins?: any[];
     readOnly?: boolean;
@@ -201,8 +203,8 @@ export const useCreateEditor = (
             },
             disableCursors: false,
             hocuspocusProviderOptions: {
-              url: "ws://192.168.1.42:1234",
-              name: "test",
+              url: "ws://192.168.0.130:1235",
+              name: Array.isArray(docId) ? docId[0] : docId ?? "default-doc-id",
             },
           },
         }),
