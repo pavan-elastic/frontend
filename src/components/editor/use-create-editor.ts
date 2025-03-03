@@ -201,7 +201,7 @@ export const useCreateEditor = (
             },
             disableCursors: false,
             hocuspocusProviderOptions: {
-              url: "ws://0.0.0:1234",
+              url: "ws://192.168.1.42:1234",
               name: "test",
             },
           },
