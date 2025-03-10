@@ -109,6 +109,8 @@ import { ToggleElement } from "@/components/plate-ui/toggle-element";
 import { YjsPlugin } from "@udecode/plate-yjs/react";
 import { RemoteCursorOverlay } from "@/components/plate-ui/remote-cursor-overlay";
 
+import { useAppContext } from "@/app/context/AppContext";
+
 export const viewComponents = {
   [AudioPlugin.key]: MediaAudioElement,
   [BlockquotePlugin.key]: BlockquoteElement,
@@ -178,6 +180,7 @@ export const useCreateEditor = (
   } & Omit<CreatePlateEditorOptions, "plugins"> = {},
   deps: any[] = []
 ) => {
+  const { name } = useAppContext();
   return usePlateEditor<Value>(
     {
       override: {
@@ -199,11 +202,11 @@ export const useCreateEditor = (
           options: {
             cursorOptions: {
               autoSend: true,
-              data: { name: "A plate user", color: "#5AC990" },
+              data: { name: name, color: "#5AC990" },
             },
             disableCursors: false,
             hocuspocusProviderOptions: {
-              url: "ws://192.168.1.42:1234",
+              url: "ws://192.168.0.130:1234",
               name: Array.isArray(docId) ? docId[0] : docId ?? "default-doc-id",
             },
           },
