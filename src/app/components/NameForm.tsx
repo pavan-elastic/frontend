@@ -1,17 +1,19 @@
 "use client";
-import { useAppContext } from "../context/AppContext";
+// import { useAppContext } from "../context/AppContext";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import Cookies from "js-cookie"; // Correct import
 
 const NameForm = () => {
-  const { setName } = useAppContext(); // Get setName from context
+  // const { setName } = useAppContext(); // Get setName from context
   const [input, setInput] = useState("");
   const router = useRouter();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (input.trim()) {
-      setName(input);
+      // setName(input);
+      Cookies.set("username", input, { expires: 30, path: "/" });
       router.push("/notes");
     }
   };

@@ -109,7 +109,8 @@ import { ToggleElement } from "@/components/plate-ui/toggle-element";
 import { YjsPlugin } from "@udecode/plate-yjs/react";
 import { RemoteCursorOverlay } from "@/components/plate-ui/remote-cursor-overlay";
 
-import { useAppContext } from "@/app/context/AppContext";
+// import { useAppContext } from "@/app/context/AppContext";
+import Cookies from 'js-cookie';  // Correct import
 
 export const viewComponents = {
   [AudioPlugin.key]: MediaAudioElement,
@@ -180,7 +181,8 @@ export const useCreateEditor = (
   } & Omit<CreatePlateEditorOptions, "plugins"> = {},
   deps: any[] = []
 ) => {
-  const { name } = useAppContext();
+  // const { name } = useAppContext();
+  const name = Cookies.get('username');
   return usePlateEditor<Value>(
     {
       override: {
@@ -206,7 +208,7 @@ export const useCreateEditor = (
             },
             disableCursors: false,
             hocuspocusProviderOptions: {
-              url: "ws://192.168.1.42:1234",
+              url: "ws://192.168.1.44:1234",
               name: Array.isArray(docId) ? docId[0] : docId ?? "default-doc-id",
             },
           },
