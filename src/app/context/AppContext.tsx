@@ -4,7 +4,7 @@ import { createContext, useContext, useState, ReactNode } from "react";
 const AppContext = createContext<any>(null);
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
-  const [name, setName] = useState("");
+  const [name, setName] = useState("Unknown User");
 
   return (
     <AppContext.Provider value={{ name, setName }}>
