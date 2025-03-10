@@ -208,7 +208,7 @@ export const useCreateEditor = (
             },
             disableCursors: false,
             hocuspocusProviderOptions: {
-              url: "ws://192.168.1.44:1234",
+              url: "ws://172.105.57.243:1234",
               name: Array.isArray(docId) ? docId[0] : docId ?? "default-doc-id",
             },
           },
