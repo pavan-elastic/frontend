@@ -110,7 +110,7 @@ import { YjsPlugin } from "@udecode/plate-yjs/react";
 import { RemoteCursorOverlay } from "@/components/plate-ui/remote-cursor-overlay";
 
 // import { useAppContext } from "@/app/context/AppContext";
-import Cookies from 'js-cookie';  // Correct import
+import Cookies from "js-cookie"; // Correct import
 
 export const viewComponents = {
   [AudioPlugin.key]: MediaAudioElement,
@@ -182,7 +182,7 @@ export const useCreateEditor = (
   deps: any[] = []
 ) => {
   // const { name } = useAppContext();
-  const name = Cookies.get('username');
+  const name = Cookies.get("username");
   return usePlateEditor<Value>(
     {
       override: {
@@ -208,7 +208,7 @@ export const useCreateEditor = (
             },
             disableCursors: false,
             hocuspocusProviderOptions: {
-              url: "ws://172.105.57.243:1234",
+              url: process.env.NEXT_PUBLIC_YJS_URL as string,
               name: Array.isArray(docId) ? docId[0] : docId ?? "default-doc-id",
             },
           },

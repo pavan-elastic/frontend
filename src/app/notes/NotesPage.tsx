@@ -12,7 +12,9 @@ const NotesPage = () => {
   useEffect(() => {
     const fetchNotes = async () => {
       try {
-        const response = await fetch("http://172.105.57.243:5000/api/notes"); // Adjust the API route
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/notes`
+        ); // Adjust the API route
         if (!response.ok) throw new Error("Failed to fetch notes");
 
         const data = await response.json();
@@ -30,11 +32,14 @@ const NotesPage = () => {
     if (!newNoteName.trim()) return alert("Note name cannot be empty");
 
     try {
-      const response = await fetch("http://172.105.57.243:5000/api/notes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newNoteName }), // Send only name
-      });
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/notes`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: newNoteName }), // Send only name
+        }
+      );
 
       if (!response.ok) throw new Error("Failed to create note");
 
