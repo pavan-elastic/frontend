@@ -1,48 +1,51 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
+import React, { useState } from "react";
 
-import type { Value } from '@udecode/plate';
+import type { Value } from "@udecode/plate";
 
-import { cn } from '@udecode/cn';
-import { CommentsPlugin } from '@udecode/plate-comments/react';
-import { Plate, useEditorPlugin, useStoreValue } from '@udecode/plate/react';
+import { cn } from "@udecode/cn";
+import { CommentsPlugin } from "@udecode/plate-comments/react";
+import { Plate, useEditorPlugin, useStoreValue } from "@udecode/plate/react";
 import {
   differenceInDays,
   differenceInHours,
   differenceInMinutes,
   format,
-} from 'date-fns';
+} from "date-fns";
 import {
   CheckIcon,
   MoreHorizontalIcon,
   PencilIcon,
   TrashIcon,
   XIcon,
-} from 'lucide-react';
+} from "lucide-react";
 
-import { Avatar, AvatarFallback, AvatarImage } from './avatar';
+import { Avatar, AvatarFallback, AvatarImage } from "./avatar";
 import {
   discussionStore,
   useFakeCurrentUserId,
   useFakeUserInfo,
-} from './block-discussion';
-import { Button } from './button';
-import { useCommentEditor } from './comment-create-form';
+} from "./block-discussion";
+import { Button } from "./button";
+import { useCommentEditor } from "./comment-create-form";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from './dropdown-menu';
-import { Editor, EditorContainer } from './editor';
+} from "./dropdown-menu";
+import { Editor, EditorContainer } from "./editor";
+import { useComments } from "@/contexts/CommentsContext";
+import { ycomments } from "@/lib/yjs";
 
-export const formatCommentDate = (date: Date) => {
+export const formatCommentDate = (date: Date | string) => {
+  const dateObj = typeof date === "string" ? new Date(date) : date;
   const now = new Date();
-  const diffMinutes = differenceInMinutes(now, date);
-  const diffHours = differenceInHours(now, date);
-  const diffDays = differenceInDays(now, date);
+  const diffMinutes = differenceInMinutes(now, dateObj);
+  const diffHours = differenceInHours(now, dateObj);
+  const diffDays = differenceInDays(now, dateObj);
 
   if (diffMinutes < 60) {
     return `${diffMinutes}m`;
@@ -54,7 +57,7 @@ export const formatCommentDate = (date: Date) => {
     return `${diffDays}d`;
   }
 
-  return format(date, 'MM/dd/yyyy');
+  return format(dateObj, "MM/dd/yyyy");
 };
 
 export interface TComment {
@@ -75,6 +78,7 @@ export function Comment(props: {
   documentContent?: string;
   showDocumentContent?: boolean;
   onEditorClick?: () => void;
+  onRemoveComment?: () => void;
 }) {
   const {
     comment,
@@ -85,29 +89,48 @@ export function Comment(props: {
     setEditingId,
     showDocumentContent = false,
     onEditorClick,
+    onRemoveComment,
   } = props;
-  // const { user } = comment;
 
-  const discussions = useStoreValue(discussionStore, 'discussions');
+  const { discussions, updateDiscussion, removeDiscussion, addDiscussion } =
+    useComments();
   const userInfo = useFakeUserInfo(comment.userId);
   const currentUserId = useFakeCurrentUserId();
 
   const resolveDiscussion = async (id: string) => {
-    const updatedDiscussions = discussions.map((discussion) => {
-      if (discussion.id === id) {
-        return { ...discussion, isResolved: true };
-      }
-      return discussion;
-    });
-    discussionStore.set('discussions', updatedDiscussions);
+    const discussion = discussions.find((d) => d.id === id);
+    if (discussion) {
+      updateDiscussion({ ...discussion, isResolved: true });
+    }
   };
 
-  const removeDiscussion = async (id: string) => {
-    const updatedDiscussions = discussions.filter(
-      (discussion: any) => discussion.id !== id
-    );
-    discussionStore.set('discussions', updatedDiscussions);
-  };
+  const onDeleteComment = React.useCallback(() => {
+    if (!comment.id)
+      return alert("You are operating too quickly, please try again later.");
+
+    const discussion = discussions.find((d) => d.id === comment.discussionId);
+    if (!discussion) return;
+
+    const updatedDiscussion = {
+      ...discussion,
+      comments: discussion.comments.filter((c) => c.id !== comment.id),
+    };
+
+    if (updatedDiscussion.comments.length === 0) {
+      removeDiscussion(discussion.id);
+    } else {
+      updateDiscussion(updatedDiscussion);
+    }
+
+    onRemoveComment?.();
+  }, [
+    comment.discussionId,
+    comment.id,
+    discussions,
+    removeDiscussion,
+    updateDiscussion,
+    onRemoveComment,
+  ]);
 
   const updateComment = async (input: {
     id: string;
@@ -115,24 +138,25 @@ export function Comment(props: {
     discussionId: string;
     isEdited: boolean;
   }) => {
-    const updatedDiscussions = discussions.map((discussion) => {
-      if (discussion.id === input.discussionId) {
-        const updatedComments = discussion.comments.map((comment) => {
-          if (comment.id === input.id) {
-            return {
-              ...comment,
-              contentRich: input.contentRich,
-              isEdited: true,
-              updatedAt: new Date(),
-            };
-          }
-          return comment;
-        });
-        return { ...discussion, comments: updatedComments };
-      }
-      return discussion;
-    });
-    discussionStore.set('discussions', updatedDiscussions);
+    const discussion = discussions.find((d) => d.id === input.discussionId);
+    if (!discussion) return;
+
+    const updatedDiscussion = {
+      ...discussion,
+      comments: discussion.comments.map((comment) => {
+        if (comment.id === input.id) {
+          return {
+            ...comment,
+            contentRich: input.contentRich,
+            isEdited: true,
+            updatedAt: new Date(),
+          };
+        }
+        return comment;
+      }),
+    };
+
+    updateDiscussion(updatedDiscussion);
   };
 
   const { tf } = useEditorPlugin(CommentsPlugin);
@@ -218,15 +242,10 @@ export function Comment(props: {
             <CommentMoreDropdown
               onCloseAutoFocus={() => {
                 setTimeout(() => {
-                  commentEditor.tf.focus({ edge: 'endEditor' });
+                  commentEditor.tf.focus({ edge: "endEditor" });
                 }, 0);
               }}
-              onRemoveComment={() => {
-                if (discussionLength === 1) {
-                  tf.comment.unsetMark({ id: comment.discussionId });
-                  void removeDiscussion(comment.discussionId);
-                }
-              }}
+              onRemoveComment={onDeleteComment}
               comment={comment}
               dropdownOpen={dropdownOpen}
               setDropdownOpen={setDropdownOpen}
@@ -313,46 +332,15 @@ export function CommentMoreDropdown(props: CommentMoreDropdownProps) {
     onRemoveComment,
   } = props;
 
-  const discussions = useStoreValue(discussionStore, 'discussions');
+  const { discussions } = useComments();
 
   const selectedEditCommentRef = React.useRef<boolean>(false);
-
-  const onDeleteComment = React.useCallback(() => {
-    if (!comment.id)
-      return alert('You are operating too quickly, please try again later.');
-
-    // Find and update the discussion
-    const updatedDiscussions = discussions.map((discussion: any) => {
-      if (discussion.id !== comment.discussionId) {
-        return discussion;
-      }
-
-      const commentIndex = discussion.comments.findIndex(
-        (c: any) => c.id === comment.id
-      );
-      if (commentIndex === -1) {
-        return discussion;
-      }
-
-      return {
-        ...discussion,
-        comments: [
-          ...discussion.comments.slice(0, commentIndex),
-          ...discussion.comments.slice(commentIndex + 1),
-        ],
-      };
-    });
-
-    // Save back to session storage
-    discussionStore.set('discussions', updatedDiscussions);
-    onRemoveComment?.();
-  }, [comment.discussionId, comment.id, discussions, onRemoveComment]);
 
   const onEditComment = React.useCallback(() => {
     selectedEditCommentRef.current = true;
 
     if (!comment.id)
-      return alert('You are operating too quickly, please try again later.');
+      return alert("You are operating too quickly, please try again later.");
 
     setEditingId(comment.id);
   }, [comment.id, setEditingId]);
@@ -364,7 +352,7 @@ export function CommentMoreDropdown(props: CommentMoreDropdownProps) {
       modal={false}
     >
       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-        <Button variant="ghost" className={cn('h-6 p-1 text-muted-foreground')}>
+        <Button variant="ghost" className={cn("h-6 p-1 text-muted-foreground")}>
           <MoreHorizontalIcon className="size-4" />
         </Button>
       </DropdownMenuTrigger>
@@ -384,7 +372,7 @@ export function CommentMoreDropdown(props: CommentMoreDropdownProps) {
             <PencilIcon className="size-4" />
             Edit comment
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={onDeleteComment}>
+          <DropdownMenuItem onClick={onRemoveComment}>
             <TrashIcon className="size-4" />
             Delete comment
           </DropdownMenuItem>

@@ -1,76 +1,74 @@
-'use client';
+"use client";
 
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo } from "react";
 
-import { cn, withProps } from '@udecode/cn';
-import { type Value, nanoid, NodeApi } from '@udecode/plate';
-import { AIPlugin } from '@udecode/plate-ai/react';
+import { cn, withProps } from "@udecode/cn";
+import { type Value, nanoid, NodeApi } from "@udecode/plate";
+import { AIPlugin } from "@udecode/plate-ai/react";
 import {
   BasicMarksPlugin,
   BoldPlugin,
   ItalicPlugin,
   StrikethroughPlugin,
   UnderlinePlugin,
-} from '@udecode/plate-basic-marks/react';
-import { getCommentKey, getDraftCommentKey } from '@udecode/plate-comments';
-import { CommentsPlugin, useCommentId } from '@udecode/plate-comments/react';
-import { DatePlugin } from '@udecode/plate-date/react';
-import { EmojiInputPlugin } from '@udecode/plate-emoji/react';
-import { LinkPlugin } from '@udecode/plate-link/react';
-import { InlineEquationPlugin } from '@udecode/plate-math/react';
+} from "@udecode/plate-basic-marks/react";
+import { getCommentKey, getDraftCommentKey } from "@udecode/plate-comments";
+import { CommentsPlugin, useCommentId } from "@udecode/plate-comments/react";
+import { DatePlugin } from "@udecode/plate-date/react";
+import { EmojiInputPlugin } from "@udecode/plate-emoji/react";
+import { LinkPlugin } from "@udecode/plate-link/react";
+import { InlineEquationPlugin } from "@udecode/plate-math/react";
 import {
   MentionInputPlugin,
   MentionPlugin,
-} from '@udecode/plate-mention/react';
-import { Plate, useEditorRef, useStoreSelect } from '@udecode/plate/react';
-import { type CreatePlateEditorOptions, PlateLeaf } from '@udecode/plate/react';
-import { ArrowUpIcon } from 'lucide-react';
+} from "@udecode/plate-mention/react";
+import { Plate, useEditorRef, useStoreSelect } from "@udecode/plate/react";
+import { type CreatePlateEditorOptions, PlateLeaf } from "@udecode/plate/react";
+import { ArrowUpIcon } from "lucide-react";
 
-import { useCreateEditor } from '@/components/editor/use-create-editor';
+import { useCreateEditor } from "@/components/editor/use-create-editor";
 import {
   Avatar,
   AvatarFallback,
   AvatarImage,
-} from '@/components/plate-ui/avatar';
+} from "@/components/plate-ui/avatar";
 
-import type { TDiscussion } from './block-discussion';
-import type { TComment } from './comment';
+import type { TDiscussion } from "./block-discussion";
+import type { TComment } from "./comment";
 
-import { AILeaf } from './ai-leaf';
-import {
-  discussionStore,
-  useFakeCurrentUserId,
-  useFakeUserInfo,
-} from './block-discussion';
-import { Button } from './button';
-import { DateElement } from './date-element';
-import { Editor, EditorContainer } from './editor';
-import { EmojiInputElement } from './emoji-input-element';
-import { InlineEquationElement } from './inline-equation-element';
-import { LinkElement } from './link-element';
-import { MentionElement } from './mention-element';
-import { MentionInputElement } from './mention-input-element';
+import { AILeaf } from "./ai-leaf";
+import { useFakeCurrentUserId, useFakeUserInfo } from "./block-discussion";
+import { Button } from "./button";
+import { DateElement } from "./date-element";
+import { Editor, EditorContainer } from "./editor";
+import { EmojiInputElement } from "./emoji-input-element";
+import { InlineEquationElement } from "./inline-equation-element";
+import { LinkElement } from "./link-element";
+import { MentionElement } from "./mention-element";
+import { MentionInputElement } from "./mention-input-element";
+import { useComments } from "@/contexts/CommentsContext";
+import { ycomments } from "@/lib/yjs";
 
 export const useCommentEditor = (
-  options: Omit<CreatePlateEditorOptions, 'plugins'> = {},
+  options: Omit<CreatePlateEditorOptions, "plugins"> = {},
   deps: any[] = []
 ) => {
   const commentEditor = useCreateEditor(
     {
-      id: 'comment',
+      id: "comment",
       override: {
         components: {
           [AIPlugin.key]: AILeaf,
-          [BoldPlugin.key]: withProps(PlateLeaf, { as: 'strong' }),
+          [BoldPlugin.key]: withProps(PlateLeaf, { as: "strong" }),
           [DatePlugin.key]: DateElement,
           [EmojiInputPlugin.key]: EmojiInputElement,
           [InlineEquationPlugin.key]: InlineEquationElement,
-          [ItalicPlugin.key]: withProps(PlateLeaf, { as: 'em' }),
+          [ItalicPlugin.key]: withProps(PlateLeaf, { as: "em" }),
           [LinkPlugin.key]: LinkElement,
           [MentionInputPlugin.key]: MentionInputElement,
           [MentionPlugin.key]: MentionElement,
-          [StrikethroughPlugin.key]: withProps(PlateLeaf, { as: 's' }),
-          [UnderlinePlugin.key]: withProps(PlateLeaf, { as: 'u' }),
+          [StrikethroughPlugin.key]: withProps(PlateLeaf, { as: "s" }),
+          [UnderlinePlugin.key]: withProps(PlateLeaf, { as: "u" }),
           // [SlashInputPlugin.key]: SlashInputElement,
         },
       },
@@ -97,11 +95,7 @@ export function CommentCreateForm({
   focusOnMount?: boolean;
   isSuggesting?: boolean;
 }) {
-  const discussions = useStoreSelect(
-    discussionStore,
-    (state) => state.discussions
-  );
-
+  const { discussions, updateDiscussion } = useComments();
   const editor = useEditorRef();
   const discussionId = useCommentId() ?? discussionIdProp;
   const [resetKey, setResetKey] = React.useState(0);
@@ -112,8 +106,8 @@ export function CommentCreateForm({
   const commentContent = useMemo(
     () =>
       commentValue
-        ? NodeApi.string({ children: commentValue as any, type: 'p' })
-        : '',
+        ? NodeApi.string({ children: commentValue as any, type: "p" })
+        : "",
     [commentValue]
   );
   const commentEditor = useCommentEditor({}, [resetKey]);
@@ -129,7 +123,7 @@ export function CommentCreateForm({
 
     if (discussionId) {
       // Get existing discussion
-      const discussion = discussions.find((d: any) => d.id === discussionId);
+      const discussion = discussions.find((d) => d.id === discussionId);
 
       if (!discussion || !commentValue) return;
 
@@ -140,7 +134,6 @@ export function CommentCreateForm({
         createdAt: new Date(),
         discussionId,
         isEdited: false,
-        // mock user id
         userId: currentUserId,
       };
 
@@ -150,13 +143,8 @@ export function CommentCreateForm({
         comments: [...discussion.comments, comment],
       };
 
-      // Filter out old discussion and add updated one
-      const updatedDiscussions = discussions
-        .filter((d: any) => d.id !== discussionId)
-        .concat(updatedDiscussion);
-
-      discussionStore.set('discussions', updatedDiscussions);
-
+      // Update discussion in Yjs
+      updateDiscussion(updatedDiscussion);
       return;
     }
 
@@ -168,10 +156,10 @@ export function CommentCreateForm({
 
     const documentContent = commentsNodeEntry
       .map(([node]) => node.text)
-      .join('');
+      .join("");
 
     const _discussionId = nanoid();
-    // Mock creating new discussion
+    // Create new discussion
     const newDiscussion: TDiscussion = {
       id: _discussionId,
       comments: [
@@ -190,8 +178,9 @@ export function CommentCreateForm({
       userId: currentUserId,
     };
 
-    // Update discussions store
-    discussionStore.set('discussions', [...discussions, newDiscussion]);
+    // Update discussions in Yjs
+    const currentDiscussions = ycomments.get("discussions") || [];
+    ycomments.set("discussions", [...currentDiscussions, newDiscussion]);
 
     const id = newDiscussion.id;
 
@@ -204,14 +193,19 @@ export function CommentCreateForm({
       );
       editor.tf.unsetNodes([getDraftCommentKey()], { at: path });
     });
-  }, [discussionId, editor, commentValue, currentUserId, discussions]);
+  }, [
+    discussionId,
+    editor,
+    commentValue,
+    currentUserId,
+    discussions,
+    updateDiscussion,
+  ]);
 
   const onAddSuggestion = React.useCallback(async () => {
-    if (!discussionId) return;
+    if (!discussionId || !commentValue) return;
 
-    if (!commentValue) return;
-
-    // Mock creating suggestion
+    // Create suggestion
     const suggestion: TDiscussion = {
       id: discussionId,
       comments: [
@@ -221,20 +215,21 @@ export function CommentCreateForm({
           createdAt: new Date(),
           discussionId,
           isEdited: false,
-          userId: 'user1',
+          userId: "user1",
         },
       ],
       createdAt: new Date(),
       isResolved: false,
-      userId: 'user1',
+      userId: "user1",
     };
 
-    // Update discussions store
-    discussionStore.set('discussions', [...discussions, suggestion]);
-  }, [discussionId, commentValue, discussions]);
+    // Update discussions in Yjs
+    const currentDiscussions = ycomments.get("discussions") || [];
+    ycomments.set("discussions", [...currentDiscussions, suggestion]);
+  }, [discussionId, commentValue]);
 
   return (
-    <div className={cn('flex w-full', className)}>
+    <div className={cn("flex w-full", className)}>
       <div className="mt-1 mr-1 shrink-0">
         {/* Replace to your own backend or refer to potion */}
         <Avatar className="size-6">
