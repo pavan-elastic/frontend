@@ -1,42 +1,42 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
+import React, { useState } from "react";
 
-import type { Value } from '@udecode/plate';
+import type { Value } from "@udecode/plate";
 
-import { cn } from '@udecode/cn';
-import { CommentsPlugin } from '@udecode/plate-comments/react';
-import { Plate, useEditorPlugin, useStoreValue } from '@udecode/plate/react';
+import { cn } from "@udecode/cn";
+import { CommentsPlugin } from "@udecode/plate-comments/react";
+import { Plate, useEditorPlugin, useStoreValue } from "@udecode/plate/react";
 import {
   differenceInDays,
   differenceInHours,
   differenceInMinutes,
   format,
-} from 'date-fns';
+} from "date-fns";
 import {
   CheckIcon,
   MoreHorizontalIcon,
   PencilIcon,
   TrashIcon,
   XIcon,
-} from 'lucide-react';
+} from "lucide-react";
 
-import { Avatar, AvatarFallback, AvatarImage } from './avatar';
+import { Avatar, AvatarFallback, AvatarImage } from "./avatar";
 import {
   discussionStore,
   useFakeCurrentUserId,
   useFakeUserInfo,
-} from './block-discussion';
-import { Button } from './button';
-import { useCommentEditor } from './comment-create-form';
+} from "./block-discussion";
+import { Button } from "./button";
+import { useCommentEditor } from "./comment-create-form";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from './dropdown-menu';
-import { Editor, EditorContainer } from './editor';
+} from "./dropdown-menu";
+import { Editor, EditorContainer } from "./editor";
 
 export const formatCommentDate = (date: Date) => {
   const now = new Date();
@@ -54,7 +54,7 @@ export const formatCommentDate = (date: Date) => {
     return `${diffDays}d`;
   }
 
-  return format(date, 'MM/dd/yyyy');
+  return format(date, "MM/dd/yyyy");
 };
 
 export interface TComment {
@@ -88,25 +88,38 @@ export function Comment(props: {
   } = props;
   // const { user } = comment;
 
-  const discussions = useStoreValue(discussionStore, 'discussions');
+  const discussions = useStoreValue(discussionStore, "discussions");
+  const saveDiscussions = useStoreValue(discussionStore, "saveDiscussions");
+  const isLoading = useStoreValue(discussionStore, "isLoading");
   const userInfo = useFakeUserInfo(comment.userId);
   const currentUserId = useFakeCurrentUserId();
 
   const resolveDiscussion = async (id: string) => {
-    const updatedDiscussions = discussions.map((discussion) => {
-      if (discussion.id === id) {
-        return { ...discussion, isResolved: true };
-      }
-      return discussion;
-    });
-    discussionStore.set('discussions', updatedDiscussions);
+    try {
+      const updatedDiscussions = discussions.map((discussion) => {
+        if (discussion.id === id) {
+          return { ...discussion, isResolved: true };
+        }
+        return discussion;
+      });
+      discussionStore.set("discussions", updatedDiscussions);
+      await saveDiscussions(updatedDiscussions, "current-document");
+      tf.comment.unsetMark({ id });
+    } catch (error) {
+      console.error("Failed to resolve discussion:", error);
+    }
   };
 
   const removeDiscussion = async (id: string) => {
-    const updatedDiscussions = discussions.filter(
-      (discussion: any) => discussion.id !== id
-    );
-    discussionStore.set('discussions', updatedDiscussions);
+    try {
+      const updatedDiscussions = discussions.filter(
+        (discussion) => discussion.id !== id
+      );
+      discussionStore.set("discussions", updatedDiscussions);
+      await saveDiscussions(updatedDiscussions, "current-document");
+    } catch (error) {
+      console.error("Failed to remove discussion:", error);
+    }
   };
 
   const updateComment = async (input: {
@@ -115,24 +128,29 @@ export function Comment(props: {
     discussionId: string;
     isEdited: boolean;
   }) => {
-    const updatedDiscussions = discussions.map((discussion) => {
-      if (discussion.id === input.discussionId) {
-        const updatedComments = discussion.comments.map((comment) => {
-          if (comment.id === input.id) {
-            return {
-              ...comment,
-              contentRich: input.contentRich,
-              isEdited: true,
-              updatedAt: new Date(),
-            };
-          }
-          return comment;
-        });
-        return { ...discussion, comments: updatedComments };
-      }
-      return discussion;
-    });
-    discussionStore.set('discussions', updatedDiscussions);
+    try {
+      const updatedDiscussions = discussions.map((discussion) => {
+        if (discussion.id === input.discussionId) {
+          const updatedComments = discussion.comments.map((comment) => {
+            if (comment.id === input.id) {
+              return {
+                ...comment,
+                contentRich: input.contentRich,
+                isEdited: true,
+                updatedAt: new Date(),
+              };
+            }
+            return comment;
+          });
+          return { ...discussion, comments: updatedComments };
+        }
+        return discussion;
+      });
+      discussionStore.set("discussions", updatedDiscussions);
+      await saveDiscussions(updatedDiscussions, "current-document");
+    } catch (error) {
+      console.error("Failed to update comment:", error);
+    }
   };
 
   const { tf } = useEditorPlugin(CommentsPlugin);
@@ -180,6 +198,10 @@ export function Comment(props: {
   const [hovering, setHovering] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
   return (
     <div
       onMouseEnter={() => setHovering(true)}
@@ -218,7 +240,7 @@ export function Comment(props: {
             <CommentMoreDropdown
               onCloseAutoFocus={() => {
                 setTimeout(() => {
-                  commentEditor.tf.focus({ edge: 'endEditor' });
+                  commentEditor.tf.focus({ edge: "endEditor" });
                 }, 0);
               }}
               onRemoveComment={() => {
@@ -313,16 +335,16 @@ export function CommentMoreDropdown(props: CommentMoreDropdownProps) {
     onRemoveComment,
   } = props;
 
-  const discussions = useStoreValue(discussionStore, 'discussions');
+  const discussions = useStoreValue(discussionStore, "discussions");
 
   const selectedEditCommentRef = React.useRef<boolean>(false);
 
   const onDeleteComment = React.useCallback(() => {
     if (!comment.id)
-      return alert('You are operating too quickly, please try again later.');
+      return alert("You are operating too quickly, please try again later.");
 
     // Find and update the discussion
-    const updatedDiscussions = discussions.map((discussion: any) => {
+    const updatedDiscussions = discussions.map((discussion) => {
       if (discussion.id !== comment.discussionId) {
         return discussion;
       }
@@ -344,7 +366,7 @@ export function CommentMoreDropdown(props: CommentMoreDropdownProps) {
     });
 
     // Save back to session storage
-    discussionStore.set('discussions', updatedDiscussions);
+    discussionStore.set("discussions", updatedDiscussions);
     onRemoveComment?.();
   }, [comment.discussionId, comment.id, discussions, onRemoveComment]);
 
@@ -352,7 +374,7 @@ export function CommentMoreDropdown(props: CommentMoreDropdownProps) {
     selectedEditCommentRef.current = true;
 
     if (!comment.id)
-      return alert('You are operating too quickly, please try again later.');
+      return alert("You are operating too quickly, please try again later.");
 
     setEditingId(comment.id);
   }, [comment.id, setEditingId]);
@@ -364,7 +386,7 @@ export function CommentMoreDropdown(props: CommentMoreDropdownProps) {
       modal={false}
     >
       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-        <Button variant="ghost" className={cn('h-6 p-1 text-muted-foreground')}>
+        <Button variant="ghost" className={cn("h-6 p-1 text-muted-foreground")}>
           <MoreHorizontalIcon className="size-4" />
         </Button>
       </DropdownMenuTrigger>

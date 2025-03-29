@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from "react";
 
-import type { TSuggestionText } from '@udecode/plate-suggestion';
+import type { TSuggestionText } from "@udecode/plate-suggestion";
 import type {
   PlateRenderElementProps,
   RenderNodeWrapper,
-} from '@udecode/plate/react';
+} from "@udecode/plate/react";
 
 import {
   type NodeEntry,
@@ -15,42 +15,42 @@ import {
   createZustandStore,
   PathApi,
   TextApi,
-} from '@udecode/plate';
-import { type TCommentText, getDraftCommentKey } from '@udecode/plate-comments';
-import { CommentsPlugin } from '@udecode/plate-comments/react';
-import { SuggestionPlugin } from '@udecode/plate-suggestion/react';
+} from "@udecode/plate";
+import { type TCommentText, getDraftCommentKey } from "@udecode/plate-comments";
+import { CommentsPlugin } from "@udecode/plate-comments/react";
+import { SuggestionPlugin } from "@udecode/plate-suggestion/react";
 import {
   useEditorPlugin,
   useEditorRef,
   usePluginOption,
   useStoreValue,
-} from '@udecode/plate/react';
+} from "@udecode/plate/react";
 import {
   MessageSquareTextIcon,
   MessagesSquareIcon,
   PencilLineIcon,
-} from 'lucide-react';
+} from "lucide-react";
 
 import {
   type CommentsConfig,
   commentsPlugin,
-} from '@/components/editor/plugins/comments-plugin';
-import { suggestionPlugin } from '@/components/editor/plugins/suggestion-plugin';
-import { Button } from '@/components/plate-ui/button';
+} from "@/components/editor/plugins/comments-plugin";
+import { suggestionPlugin } from "@/components/editor/plugins/suggestion-plugin";
+import { Button } from "@/components/plate-ui/button";
 import {
   Popover,
   PopoverAnchor,
   PopoverContent,
   PopoverTrigger,
-} from '@/components/plate-ui/popover';
+} from "@/components/plate-ui/popover";
 
 import {
   BlockSuggestionCard,
   isResolvedSuggestion,
   useResolveSuggestion,
-} from './block-suggestion';
-import { type TComment, Comment } from './comment';
-import { CommentCreateForm } from './comment-create-form';
+} from "./block-suggestion";
+import { type TComment, Comment } from "./comment";
+import { CommentCreateForm } from "./comment-create-form";
 
 export interface TDiscussion {
   id: string;
@@ -63,133 +63,205 @@ export interface TDiscussion {
 
 const initTestDiscussions = [
   {
-    id: 'discussion1',
+    id: "discussion1",
     comments: [
       {
-        id: 'comment1',
+        id: "comment1",
         contentRich: [
           {
             children: [
               {
-                text: 'This is a comment',
+                text: "This is a comment",
               },
             ],
-            type: 'p',
+            type: "p",
           },
         ],
         createdAt: new Date(Date.now() - 900_000),
-        discussionId: 'discussion1',
+        discussionId: "discussion1",
         isEdited: false,
-        userId: 'user1',
+        userId: "user1",
       },
     ],
     createdAt: new Date(),
-    documentContent: 'comments to your content',
+    documentContent: "comments to your content",
     isResolved: false,
-    userId: 'user1',
+    userId: "user1",
   },
   {
-    id: 'discussion2',
+    id: "discussion2",
     comments: [
       {
-        id: 'comment1',
+        id: "comment1",
         contentRich: [
           {
             children: [
               {
-                text: 'Hey, what do you think about this approach?',
+                text: "Hey, what do you think about this approach?",
               },
             ],
-            type: 'p',
+            type: "p",
           },
         ],
         createdAt: new Date(Date.now() - 900_000),
-        discussionId: 'discussion1',
+        discussionId: "discussion1",
         isEdited: false,
-        userId: 'user1',
+        userId: "user1",
       },
       {
-        id: 'comment2',
+        id: "comment2",
         contentRich: [
           {
             children: [
               {
-                text: 'Looks good!',
+                text: "Looks good!",
               },
             ],
-            type: 'p',
+            type: "p",
           },
         ],
         createdAt: new Date(Date.now() - 800_000),
-        discussionId: 'discussion1',
+        discussionId: "discussion1",
         isEdited: false,
-        userId: 'user2',
+        userId: "user2",
       },
       {
-        id: 'comment3',
+        id: "comment3",
         contentRich: [
           {
             children: [
               {
-                text: 'Thanks for the feedback!',
+                text: "Thanks for the feedback!",
               },
             ],
-            type: 'p',
+            type: "p",
           },
         ],
         createdAt: new Date(Date.now() - 700_000),
-        discussionId: 'discussion1',
+        discussionId: "discussion1",
         isEdited: false,
-        userId: 'user1',
+        userId: "user1",
       },
     ],
     createdAt: new Date(),
-    documentContent: 'collaborate',
+    documentContent: "collaborate",
     isResolved: false,
-    userId: 'user2',
+    userId: "user2",
   },
 ];
 
+// Add at the top of the file after imports
 type TDiscussionStore = {
   discussions: TDiscussion[];
+  isLoading: boolean;
+  error: string | null;
+  saveDiscussions: (
+    discussions: TDiscussion[],
+    documentId: string
+  ) => Promise<void>;
+  loadDiscussions: (documentId: string) => Promise<TDiscussion[]>;
 };
 
+// Replace the existing discussionStore
 export const discussionStore = createZustandStore<TDiscussionStore>(
   {
-    discussions: initTestDiscussions,
+    discussions: [],
+    isLoading: false,
+    error: null,
+    saveDiscussions: async (discussions, documentId) => {
+      try {
+        discussionStore.set("isLoading", true);
+        discussionStore.set("error", null);
+
+        const response = await fetch("http://localhost:3001/api/discussions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ discussions, documentId }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to save discussions");
+        }
+      } catch (error) {
+        console.error("Failed to save discussions:", error);
+        discussionStore.set("error", "Failed to save discussions");
+      } finally {
+        discussionStore.set("isLoading", false);
+      }
+    },
+    loadDiscussions: async (documentId) => {
+      try {
+        discussionStore.set("isLoading", true);
+        discussionStore.set("error", null);
+
+        const response = await fetch(
+          `http://localhost:3001/api/discussions?documentId=${documentId}`
+        );
+        if (!response.ok) {
+          throw new Error("Failed to load discussions");
+        }
+        const data = await response.json();
+        return data;
+      } catch (error) {
+        console.error("Failed to load discussions:", error);
+        discussionStore.set("error", "Failed to load discussions");
+        return [];
+      } finally {
+        discussionStore.set("isLoading", false);
+      }
+    },
   },
   {
-    devtools: { enabled: true }, // Redux DevTools with options
-    mutative: true, // shorthand for { enabled: true }
-    name: 'discussion',
+    devtools: { enabled: true },
+    mutative: true,
+    name: "discussion",
   }
 );
 
-export const useFakeCurrentUserId = () => 'user3';
+export const useFakeCurrentUserId = () => "user3";
 
 export const useFakeUserInfo = (userId: string) => {
   const mockUsers = [
     {
-      id: 'user1',
-      avatarUrl: 'https://avatars.githubusercontent.com/u/19695832?s=96&v=4',
-      name: 'zbeyens',
+      id: "user1",
+      avatarUrl: "https://avatars.githubusercontent.com/u/19695832?s=96&v=4",
+      name: "zbeyens",
     },
     {
-      id: 'user2',
-      avatarUrl: 'https://avatars.githubusercontent.com/u/4272090?v=4',
-      name: '12joan',
+      id: "user2",
+      avatarUrl: "https://avatars.githubusercontent.com/u/4272090?v=4",
+      name: "12joan",
     },
     {
-      id: 'user3',
-      avatarUrl: 'https://avatars.githubusercontent.com/u/164472012?v=4',
-      name: 'felixfeng33',
+      id: "user3",
+      avatarUrl: "https://avatars.githubusercontent.com/u/164472012?v=4",
+      name: "felixfeng33",
     },
   ];
 
   return mockUsers.find((user) => user.id === userId);
 };
 
+export function useLoadDiscussions() {
+  const loadDiscussions = useStoreValue(discussionStore, "loadDiscussions");
+
+  useEffect(() => {
+    const loadInitialDiscussions = async () => {
+      try {
+        const discussions = await loadDiscussions("current-document");
+        discussionStore.set("discussions", discussions);
+      } catch (error) {
+        console.error("Failed to load initial discussions:", error);
+      }
+    };
+
+    void loadInitialDiscussions();
+  }, [loadDiscussions]);
+}
+
 export const BlockDiscussion: RenderNodeWrapper<CommentsConfig> = (props) => {
+  useLoadDiscussions();
+
   const { api, editor, element } = props;
 
   const blockPath = editor.api.findPath(element);
@@ -246,13 +318,13 @@ const BlockCommentsContent = ({
   const discussionsCount = resolvedDiscussions.length;
   const totalCount = suggestionsCount + discussionsCount;
 
-  const activeSuggestionId = usePluginOption(suggestionPlugin, 'activeId');
+  const activeSuggestionId = usePluginOption(suggestionPlugin, "activeId");
   const activeSuggestion =
     activeSuggestionId &&
     resolvedSuggestion.find((s) => s.suggestionId === activeSuggestionId);
 
-  const commentingBlock = usePluginOption(commentsPlugin, 'commentingBlock');
-  const activeCommentId = usePluginOption(commentsPlugin, 'activeId');
+  const commentingBlock = usePluginOption(commentsPlugin, "commentingBlock");
+  const activeCommentId = usePluginOption(commentsPlugin, "activeId");
   const isCommenting = activeCommentId === getDraftCommentKey();
   const activeDiscussion =
     activeCommentId &&
@@ -328,7 +400,7 @@ const BlockCommentsContent = ({
           if (!_open_ && isCommenting && draftCommentNode) {
             editor.tf.unsetNodes(getDraftCommentKey(), {
               at: [],
-              mode: 'lowest',
+              mode: "lowest",
               match: (n) => n[getDraftCommentKey()],
             });
           }
@@ -461,11 +533,11 @@ export const useResolvedDiscussion = (
 ) => {
   const { api, getOption, setOption } = useEditorPlugin(commentsPlugin);
 
-  const discussions = useStoreValue(discussionStore, 'discussions');
+  const discussions = useStoreValue(discussionStore, "discussions");
 
   commentNodes.forEach(([node]) => {
     const id = api.comment.nodeId(node);
-    const map = getOption('uniquePathMap');
+    const map = getOption("uniquePathMap");
 
     if (!id) return;
 
@@ -476,14 +548,14 @@ export const useResolvedDiscussion = (
       const nodes = api.comment.node({ id, at: previousPath });
 
       if (!nodes) {
-        setOption('uniquePathMap', new Map(map).set(id, blockPath));
+        setOption("uniquePathMap", new Map(map).set(id, blockPath));
         return;
       }
 
       return;
     }
     // TODO: fix throw error
-    setOption('uniquePathMap', new Map(map).set(id, blockPath));
+    setOption("uniquePathMap", new Map(map).set(id, blockPath));
   });
 
   const commentsIds = new Set(
@@ -497,7 +569,7 @@ export const useResolvedDiscussion = (
     }))
     .filter((item: TDiscussion) => {
       /** If comment cross blocks just show it in the first block */
-      const commentsPathMap = getOption('uniquePathMap');
+      const commentsPathMap = getOption("uniquePathMap");
       const firstBlockPath = commentsPathMap.get(item.id);
 
       if (!firstBlockPath) return false;
@@ -511,4 +583,24 @@ export const useResolvedDiscussion = (
     });
 
   return resolvedDiscussions;
+};
+
+// Add a hook to handle discussion persistence
+export const useDiscussionPersistence = () => {
+  const { discussions, saveDiscussions, loadDiscussions } =
+    useStoreValue(discussionStore);
+
+  // Load discussions on mount
+  useEffect(() => {
+    const load = async () => {
+      const loadedDiscussions = await loadDiscussions();
+      discussionStore.set("discussions", loadedDiscussions);
+    };
+    void load();
+  }, [loadDiscussions]);
+
+  // Save discussions when they change
+  useEffect(() => {
+    void saveDiscussions(discussions);
+  }, [discussions, saveDiscussions]);
 };
